@@ -5,8 +5,13 @@ import List from "react-virtualized/dist/commonjs/List";
 import '@blueprintjs/table/lib/css/table.css';
 
 class BluePrintTable extends Component {
+
   cellRenderer = (rowIndex,colIndex) => {
-    return <Cell>{`$${(rowIndex * 10).toFixed(2)}`}</Cell>;
+    const list = this.props.list;
+    const columnData = this.props.columnData;
+    const dataKey = columnData[colIndex].dataKey;
+    const text = list[rowIndex][dataKey];
+    return <Cell>{text}</Cell>;
   }
 
   rowRenderer(...args){
@@ -35,13 +40,16 @@ class BluePrintTable extends Component {
   }
 
   render() {
+    const list = this.props.list;
     const test = this.test();
     return (
       <div>
-        <Table numRows={20}>
-        {test}
-        {/* <Column name="Dollars" cellRenderer={this.cellRenderer} />
-        <Column name="Dollars" cellRenderer={this.cellRenderer} /> */}
+        <Table numRows={list.length}>
+        <Column name="name" cellRenderer={this.cellRenderer} />
+        <Column name="age" cellRenderer={this.cellRenderer} />
+        <Column name="sex" cellRenderer={this.cellRenderer} />
+        <Column name="height" cellRenderer={this.cellRenderer} />
+        <Column name="game" cellRenderer={this.cellRenderer} />
         
           
         </Table>

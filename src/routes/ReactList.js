@@ -1,27 +1,28 @@
 import React, { Component } from "react";
 import clsx from "clsx";
 import { Column, Table } from "react-virtualized";
+import ColumnHocCom from "./ColumnHocCom";
 import Grid from "react-virtualized/dist/commonjs/Grid";
 import List from "react-virtualized/dist/commonjs/List";
 import AutoSizer from "react-virtualized/dist/commonjs/AutoSizer";
 import ScrollSync from "react-virtualized/dist/commonjs/ScrollSync";
 import scrollbarSize from "dom-helpers/util/scrollbarSize";
-import _ from 'lodash';
+import _ from "lodash";
 
 // import styles from "react-virtualized/styles.css"; // only needs to be imported once
 import styles from "./ScrollSync.example.css";
 class ReactList extends Component {
-  constructor(props){
+  constructor(props) {
     super(props);
     this.state = {
-      scrollBottomNum:0,
-    }
+      scrollBottomNum: 0
+    };
     this._renderBodyCell = this._renderBodyCell.bind(this);
     this._renderHeaderCell = this._renderHeaderCell.bind(this);
     this._renderLeftSideCell = this._renderLeftSideCell.bind(this);
     this._renderLeftHeaderCell = this._renderLeftHeaderCell.bind(this);
     this.onElScroll = this.onElScroll.bind(this);
-    this.onElScroll = _.debounce(this.onElScroll,80);
+    this.onElScroll = _.debounce(this.onElScroll, 80);
   }
   _renderBodyCell({ columnIndex, key, rowIndex, style }) {
     if (columnIndex < 1) {
@@ -40,15 +41,25 @@ class ReactList extends Component {
   }
 
   _renderLeftHeaderCell({ columnIndex, key, style }) {
+    const columnData = this.props.columnData;
+    const columnItem = _.get(columnData, [columnIndex],{}); // column 整列 信息
+    const _title = _.get(this.props,['columnData',columnIndex,"title"]);
+    if(columnItem.width){
+      style = {
+        ...style,
+        width:columnItem.width
+      }
+    }
     return (
       <div className={styles.headerCell} key={key} style={style}>
-        {`${this.props.titles[columnIndex]}`}
+        {_title}
       </div>
     );
   }
 
   _renderLeftSideCell({ columnIndex, key, rowIndex, style }) {
     const list = this.props.data;
+    const columnData = this.props.columnData;
     const rowClass =
       rowIndex % 2 === 0
         ? columnIndex % 2 === 0
@@ -57,68 +68,98 @@ class ReactList extends Component {
         : columnIndex % 2 !== 0
         ? styles.evenRow
         : styles.oddRow;
-    const classNames = clsx(rowClass, styles.cell); 
-    const title = _.get(this.props,['titles',columnIndex]); // titles 的 index 
-    const _key = _.get(this.props,['values',title]); // titles 对应的  values
-    const val = _.get(list,[rowIndex,_key]); // 读取当前是第N 行 的 对应字段
+    const classNames = clsx(rowClass, styles.cell);
+    
+    const columnItem = _.get(columnData, [columnIndex],{}); // column 整列 信息
+    
+    const _key = _.get(columnItem, ["dataKey"]); // column dataKey
+    const _ColumnRrender = _.get(columnItem, ["render"]); // column render
+    
+    const rowItem = list[rowIndex]; //行 data
+    const itemContent = _.get(rowItem, [_key]); //行内容
+
+    if(columnItem.width){
+      style = {
+        ...style,
+        width:columnItem.width
+      }
+    }
+    if (_ColumnRrender) {
+      const Ele = ColumnHocCom(_ColumnRrender);
+  
+      return (
+        <div className={classNames} key={key} style={style}>
+          <Ele index={rowIndex} rowItem={rowItem} />
+        </div>
+      );
+    }
     return (
-      <div
-       className={classNames} key={key} style={style}>
-        {`${val}`}
+      <div className={classNames} key={key} style={style}>
+        {`${itemContent}`}
       </div>
     );
   }
   //节流 80 wait
-  onElScroll = (scrollObj)=>{
-    console.log('onElScroll',scrollObj);
+  onElScroll = scrollObj => {
+    console.log("onElScroll", scrollObj);
     //如果总高度 <= 视口高度、则不算
-    if(scrollObj.scrollHeight <= scrollObj.clientHeight){ 
+    if (scrollObj.scrollHeight <= scrollObj.clientHeight) {
       return void 0;
     }
     // 滚动高度 >=  总高度 - 视口高度 / 3 - 视口高度
-    if(parseInt(scrollObj.scrollTop +scrollObj.clientHeight) >= parseInt(scrollObj.scrollHeight - scrollObj.clientHeight / 3)){
-      console.log('还有视口的3/1触底');
+    if (
+      parseInt(scrollObj.scrollTop + scrollObj.clientHeight) >=
+      parseInt(scrollObj.scrollHeight - scrollObj.clientHeight / 3)
+    ) {
+      console.log("还有视口的3/1触底");
       const scrollBottomNum = ++this.state.scrollBottomNum;
       this.setState({
-        scrollBottomNum:scrollBottomNum,
+        scrollBottomNum: scrollBottomNum
       });
       this.props.scrollButtonFn(scrollBottomNum);
     }
-  }
-
+  };
 
   render() {
     const list = this.props.data;
     let columnWidth = 150, //列宽度
-    columnCount = this.props.titles.length, // 列 数量
-    height = 400, // 高度
-    overscanColumnCount = 0,
-    overscanRowCount = 5,
-    rowHeight = 40,
-    rowCount = list.length, // 行数
-    _columnCount = 3,
-    _rowCount = 3;
+      columnCount = this.props.columnData.length, // 列 数量
+      height = 400, // 高度
+      overscanColumnCount = 0,
+      overscanRowCount = 5,
+      rowHeight = 40,
+      rowCount = list.length, // 行数
+      _columnCount = 3,
+      _rowCount = 3;
     return (
       <div>
         <ScrollSync>
-          {(args) => {
-            const {clientHeight, clientWidth,onScroll,scrollHeight,scrollLeft,scrollTop,scrollWidth} = args;
+          {args => {
+            const {
+              clientHeight,
+              clientWidth,
+              onScroll,
+              scrollHeight,
+              scrollLeft,
+              scrollTop,
+              scrollWidth
+            } = args;
             const leftBackgroundColor = {
-              r:"30",
-              g:"144",
-              b:"255"
+              r: "30",
+              g: "144",
+              b: "255"
             };
             const leftColor = "#ffffff";
             const topBackgroundColor = {
-              r:"46",
-              g:"139",
-              b:"87"
+              r: "46",
+              g: "139",
+              b: "87"
             };
             const topColor = "#ffffff";
             const middleBackgroundColor = {
-              r:"255",
-              g:"215",
-              b:"0"
+              r: "255",
+              g: "215",
+              b: "0"
             };
             const middleColor = "#ffffff";
 
@@ -180,11 +221,14 @@ class ReactList extends Component {
                   />
                 </div>
                 <div className={styles.GridColumn}>
-                  <AutoSizer >
+                  <AutoSizer>
                     {({ width }) => (
                       <div>
-                        <div style={{
-                            backgroundColor: `rgb(${topBackgroundColor.r},${ topBackgroundColor.g },${topBackgroundColor.b})`,
+                        <div
+                          style={{
+                            backgroundColor: `rgb(${topBackgroundColor.r},${
+                              topBackgroundColor.g
+                            },${topBackgroundColor.b})`,
                             color: topColor,
                             height: rowHeight,
                             width: width - scrollbarSize()
@@ -244,13 +288,6 @@ class ReactList extends Component {
     );
   }
 
-  __render() {
-    const listRender = this.listRender();
-    const testRender = this.testRender();
-    const tableRender = this.tableRender();
-    return ;
-  }
-
   rowRenderer = ({ index, isScrolling, key, style }) => {
     return (
       <div key={key} style={style}>
@@ -283,7 +320,7 @@ class ReactList extends Component {
   };
 
   tableRender = () => {
-    return (<div>123</div>)
+    return <div>123</div>;
     return (
       <div>
         <h2>Details</h2>
